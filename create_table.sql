@@ -1,4 +1,4 @@
-USE photoapp;
+USE picfusion;
 
 DROP TABLE IF EXISTS assets;
 DROP TABLE IF EXISTS users;
