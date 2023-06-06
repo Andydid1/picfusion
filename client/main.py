@@ -82,6 +82,7 @@ def prompt():
   print("   5 => download and display")
   print("   6 => bucket contents")
   print("   7 => upload a photo")
+  print("   8 => Pico Pico")
 
   cmd = int(input())
   return cmd
@@ -438,12 +439,206 @@ def upload_handle(baseurl):
   res = requests.post(url, json=body)
   print(res.text)
 
+##########################################################################
+##picfusion()
+def picfusion(baseurl):
+  """
+  Browse through the assets in the database
+  
+  Parameters
+  ----------
+  baseurl: baseurl for web service
+  
+  Returns
+  -------
+  nothing
+  """
+
+  try:
+
+    api = '/assets'
+    url = baseurl + api
+
+    res = requests.get(url)
+
+    if res.status_code != 200:
+      # failed:
+      print("Failed with status code:", res.status_code)
+      print("url: " + url)
+      if res.status_code == 400:  # we'll have an error message
+        body = res.json()
+        print("Error message:", body["message"])
+      #
+      return
+
+
+    body = res.json()
+    #
+    # map
+    #
+    assets = []
+    for row in body["data"]:
+      asset = jsons.load(row, Asset)
+      assets.append(asset)
+
+    for asset in assets:
+      print(asset.assetid)
+      print(" ", asset.assetname)
+
+    #
+    # Prompt the user to enter the assetid to display the picture
+    #
+    print("Enter asset id to display the picture>")
+    assetid = int(input())
+    current_index = next((index for (index, d) in enumerate(assets) if d.assetid == assetid), None)
+    
+
+    image = img.imread(assets[current_index].assetname)
+    plt.imshow(image)
+    plt.show(block=False)  # make plt.show() non-blocking
+    plt.pause(3)  # pause for a while for the user to see the image
+    plt.close()  # close the figure window
+
+    
+    # After displaying the picture, 
+    #prompt the user to either display the next picture, or the previous picture, or exit
+    #
+    while True:
+      print("Enter 'n' to display the next picture, 'p' to display the previous picture, or 'e' to exit>")
+      action = input().strip().lower()
+      if action == 'n':
+        if current_index < len(assets) - 1:
+          current_index += 1
+        else:
+          print("This is the last picture. Selecting 'n' will take you to the first picture.")
+          current_index = 0
+      elif action == 'p':
+        if current_index > 0:
+          current_index -= 1
+        else:
+          print("This is the first picture. Selecting 'p' will take you to the last picture.")
+          current_index = len(assets) - 1
+      elif action == 'e':
+        break
+      else:
+        print("Invalid input. Please enter 'n', 'p', or 'e'.")
+        continue
+      image = img.imread(assets[current_index].assetname)
+      plt.imshow(image)
+      plt.show(block=False)  
+      plt.pause(3)  
+      plt.close()  
+  except Exception as e:
+    logging.error("picfusion() failed:")
+    logging.error("url: " + url)
+    logging.error(e)
+    return
+
+##############################################################################
+# # picfusion with interaction
+# def picfusion(baseurl):
+#   """
+#   Browse through the assets in the database
+  
+#   Parameters
+#   ----------
+#   baseurl: baseurl for web service
+  
+#   Returns
+#   -------
+#   nothing
+#   """
+
+#   try:
+#     #
+#     # call the web service to get the first ten assets:
+#     #
+#     api = '/assets'
+#     url = baseurl + api
+
+#     res = requests.get(url)
+
+#     #
+#     # let's look at what we got back:
+#     #
+#     if res.status_code != 200:
+#       # failed:
+#       print("Failed with status code:", res.status_code)
+#       print("url: " + url)
+#       if res.status_code == 400:  # we'll have an error message
+#         body = res.json()
+#         print("Error message:", body["message"])
+#       #
+#       return
+
+#     #
+#     # deserialize and extract assets:
+#     #
+#     body = res.json()
+#     #
+#     # let's map each dictionary into a Asset object:
+#     #
+#     assets = []
+#     for row in body["data"]:
+#       asset = jsons.load(row, Asset)
+#       assets.append(asset)
+#     #
+#     # Now we can think OOP:
+#     #
+#     for asset in assets:
+#       print(asset.assetid)
+#       print(" ", asset.assetname)
+
+#     #
+#     # Prompt the user to enter the assetid to display the picture
+#     #
+#     print("Enter asset id to display the picture>")
+#     assetid = int(input())
+#     current_index = next((index for (index, d) in enumerate(assets) if d.assetid == assetid), None)
+    
+
+#     image = img.imread(assets[current_index].assetname)
+#     plt.imshow(image)
+#     plt.show(block=False)  # make plt.show() non-blocking
+#     plt.pause(1)  # pause for a while for the user to see the image
+#     plt.close()  # close the figure window
+
+#     #
+#     # After displaying the picture, prompt the user to either display the next picture, or the previous picture, or exit
+#     #
+#     while True:
+#       print("Enter 'n' to display the next picture, 'p' to display the previous picture, 'l' to like, 'd' to dislike, or 'e' to exit>")
+#       action = input().strip().lower()
+#       if action == 'n':
+#         if current_index < len(assets) - 1:
+#           current_index += 1
+#         else:
+#           print("This is the last picture. Selecting 'n' will take you to the first picture.")
+#           current_index = 0
+#       elif action == 'p':
+#         if current_index > 0:
+#           current_index -= 1
+#         else:
+#           print("This is the first picture. Selecting 'p' will take you to the last picture.")
+#           current_index = len(assets) - 1
+#       elif action == 'l':
+#         # Make a POST request to the /interactions endpoint to record the like
+#         interaction_url = baseurl + '/interactions'
+#         interaction_data = {
+#           'user_id': 1,  # Replace with the actual user_id
+#           'assetid': assets[current_index].assetid,
+#           'interaction_type': 1  # 1 for like
+#         }
+#         requests.post(interaction_url, data=interaction_data)
+#         print
+
+
 
 
 #########################################################################
 # main
 #
-print('** Welcome to PhotoApp v2 **')
+print('** Welcome to Picfusion! Pico Pico! **')
 print()
 
 # eliminate traceback so we just get error message:
@@ -512,6 +707,8 @@ while cmd != 0:
         break
   elif cmd == 7:
     upload_handle(baseurl)
+  elif cmd == 8:
+    picfusion(baseurl)
   else:
     print("** Unknown command, try again...")
   #
