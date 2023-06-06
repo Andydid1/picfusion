@@ -44,9 +44,17 @@ class User:
 
 class Asset:
   assetid: int  # these must match columns from DB table
+  like_count: int
   userid: int
   assetname: str
   bucketkey: str
+  formatted_addr: str
+  postal_code: int
+  city: str
+  state: str
+  country: str
+  latitude: float
+  longitude: float
 
 
 class BucketItem:
@@ -246,7 +254,7 @@ def assets(baseurl):
         body = res.json()
         print("Error message:", body["message"])
       #
-      return
+      return None
 
     #
     # deserialize and extract assets:
@@ -255,24 +263,30 @@ def assets(baseurl):
     #
     # let's map each dictionary into a Asset object:
     #
+    # print(body['data'])
     assets = []
     for row in body["data"]:
+      row = {k: v for k, v in row.items() if v is not None}
       asset = jsons.load(row, Asset)
+      asset.like_count = row['like_count']
       assets.append(asset)
     #
     # Now we can think OOP:
     #
-    for asset in assets:
-      print(asset.assetid)
-      print(" ", asset.userid)
-      print(" ", asset.assetname)
-      print(" ", asset.bucketkey)
+    # for asset in assets:
+    #   print(asset.assetid)
+    #   print(" ", asset.userid)
+    #   print(" ", asset.assetname)
+    #   if asset.formatted_addr: print(" ", asset.formatted_addr) 
+      # print(" ", asset.bucketkey)
+    
+    return assets
 
   except Exception as e:
     logging.error("assets() failed:")
     logging.error("url: " + url)
     logging.error(e)
-    return
+    return None
 
 ###################################################################
 #
@@ -531,32 +545,9 @@ def picfusion(baseurl):
 
   try:
 
-    api = '/assets'
-    url = baseurl + api
+    asset_lst = assets(baseurl)
 
-    res = requests.get(url)
-
-    if res.status_code != 200:
-      # failed:
-      print("Failed with status code:", res.status_code)
-      print("url: " + url)
-      if res.status_code == 400:  # we'll have an error message
-        body = res.json()
-        print("Error message:", body["message"])
-      #
-      return
-
-
-    body = res.json()
-    #
-    # map
-    #
-    assets = []
-    for row in body["data"]:
-      asset = jsons.load(row, Asset)
-      assets.append(asset)
-
-    for asset in assets:
+    for asset in asset_lst:
       print(asset.assetid)
       print(" ", asset.assetname)
 
@@ -565,7 +556,7 @@ def picfusion(baseurl):
     #
     print("Enter asset id to display the picture>")
     assetid = int(input())
-    current_index = next((index for (index, d) in enumerate(assets) if d.assetid == assetid), None)
+    current_index = next((index for (index, d) in enumerate(asset_lst) if d.assetid == assetid), None)
     
     # download(baseurl, assetid, True)
     display(baseurl, assetid)
@@ -577,7 +568,7 @@ def picfusion(baseurl):
       print("Enter 'n' to display the next picture, 'p' to display the previous picture, or 'e' to exit>")
       action = input().strip().lower()
       if action == 'n':
-        if current_index < len(assets) - 1:
+        if current_index < len(asset_lst) - 1:
           current_index += 1
         else:
           print("This is the last picture. Selecting 'n' will take you to the first picture.")
@@ -587,18 +578,17 @@ def picfusion(baseurl):
           current_index -= 1
         else:
           print("This is the first picture. Selecting 'p' will take you to the last picture.")
-          current_index = len(assets) - 1
+          current_index = len(asset_lst) - 1
       elif action == 'e':
         break
       else:
         print("Invalid input. Please enter 'n', 'p', or 'e'.")
         continue
       # download(baseurl, assets[current_index].assetid, True)
-      display(baseurl, assets[current_index].assetid)
+      display(baseurl, asset_lst[current_index].assetid)
 
   except Exception as e:
     logging.error("picfusion() failed:")
-    logging.error("url: " + url)
     logging.error(e)
     return
 
@@ -619,47 +609,19 @@ def picfusion_interact(baseurl):
   """
 
   try:
+    asset_lst = assets(baseurl)
 
-    api = '/assets'
-    url = baseurl + api
-
-    res = requests.get(url)
-
-    if res.status_code != 200:
-      # failed:
-      print("Failed with status code:", res.status_code)
-      print("url: " + url)
-      if res.status_code == 400:  # we'll have an error message
-        body = res.json()
-        print("Error message:", body["message"])
-      #
-      return
-
-
-    body = res.json()
-    #
-    # map
-    #
-    assets = []
-    for row in body["data"]:
-      asset = jsons.load(row, Asset)
-      assets.append(asset)
-
-    for asset in assets:
+    for asset in asset_lst:
       print(asset.assetid)
       print(" ", asset.assetname)
-      # Fetch interaction data for the asset
-      interaction_url = baseurl + '/interactions/' + str(asset.assetid)
-      interaction_res = requests.get(interaction_url)
-      if interaction_res.status_code == 200:
-        interaction_data = interaction_res.json()
-        print("Likes:", interaction_data['interaction_type'])
+      print("  Likes:", asset.like_count)
+      # print("Likes:", asset.like_count)
     #
     # Prompt the user to enter the assetid to display the picture
     #
     print("Enter asset id to display the picture>")
     assetid = int(input())
-    current_index = next((index for (index, d) in enumerate(assets) if d.assetid == assetid), None)
+    current_index = next((index for (index, d) in enumerate(asset_lst) if d.assetid == assetid), None)
     
     # download(baseurl, assetid, True)
     display(baseurl, assetid)
@@ -673,7 +635,7 @@ def picfusion_interact(baseurl):
 
       action = input().strip().lower()
       if action == 'n':
-        if current_index < len(assets) - 1:
+        if current_index < len(asset_lst) - 1:
           current_index += 1
         else:
           print("This is the last picture. Selecting 'n' will take you to the first picture.")
@@ -683,22 +645,21 @@ def picfusion_interact(baseurl):
           current_index -= 1
         else:
           print("This is the first picture. Selecting 'p' will take you to the last picture.")
-          current_index = len(assets) - 1
+          current_index = len(asset_lst) - 1
       elif action == '1':
-            send_interaction(baseurl, assets[current_index].assetid, 1)
+            send_interaction(baseurl, asset_lst[current_index].assetid, 1)
       elif action == '2':
-            send_interaction(baseurl, assets[current_index].assetid, -1)      
+            send_interaction(baseurl, asset_lst[current_index].assetid, -1)      
       elif action == 'e':
         break
       else:
         print("Invalid input. Please enter 'n', 'p', '1', '2', or 'e'.")
         continue
       # download(baseurl, assets[current_index].assetid, True)
-      display(baseurl, assets[current_index].assetid)
+      display(baseurl, asset_lst[current_index].assetid)
 
   except Exception as e:
     logging.error("picfusion() failed:")
-    logging.error("url: " + url)
     logging.error(e)
     return
 

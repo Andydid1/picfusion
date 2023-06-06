@@ -19,12 +19,22 @@ exports.get_assets = async (req, res) => {
     //   https://expressjs.com/en/guide/database-integration.html#mysql
     //   https://github.com/mysqljs/mysql
     //
-    var sql = "SELECT * FROM assets Order By assetid;";
+    var sql = `SELECT meta_info.assetid, IFNULL(like_count,0) as like_count, userid, 
+              assetname, bucketkey, formatted_addr, postal_code, city, 
+              state, country, latitude, longitude FROM
+                  (SELECT assetid, COALESCE(SUM(interaction_type),0) AS like_count 
+                  FROM interactions 
+                  GROUP BY assetid) like_info 
+              RIGHT OUTER JOIN
+                  (SELECT assets.assetid AS assetid, userid, assetname, 
+                  bucketkey, formatted_addr, postal_code, city, state, country, latitude, longitude 
+                  FROM assets JOIN metadata ON assets.assetid = metadata.assetid) meta_info
+              ON like_info.assetid = meta_info.assetid;`;
     dbConnection.query(sql, async (err, results, _) => {
       if (err) {
         throw err;
       }
-      console.log(results);
+      // console.log(results);
       res.json({
         "message": "success",
         "data": results
