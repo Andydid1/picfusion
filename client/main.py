@@ -21,6 +21,7 @@ import logging
 import sys
 import os
 import base64
+import io
 
 from configparser import ConfigParser
 
@@ -346,6 +347,77 @@ def download(baseurl, assetid, display=False):
     logging.error("url: " + url)
     logging.error(e)
     return
+
+###################################################################
+#
+# display
+#
+def display(baseurl, assetid):
+  """
+  Download selected asset
+  
+  Parameters
+  ----------
+  baseurl: baseurl for web service
+  assetid: target asset id
+  display: whether to display the item after download
+  
+  Returns
+  -------
+  nothing
+  """
+
+  try:
+    #
+    # call the web service:
+    #
+    api = '/download/' + str(assetid)
+    url = baseurl + api
+
+    res = requests.get(url)
+
+    #
+    # let's look at what we got back:
+    #
+    if res.status_code != 200:
+      # failed:
+      print("Failed with status code:", res.status_code)
+      print("url: " + url)
+      if res.status_code == 400:  # we'll have an error message
+        body = res.json()
+        print("Error message:", body["message"])
+      #
+      return
+
+    #
+    # deserialize and extract asset:
+    #
+    body = res.json()
+    if body['message'] == "no such asset...":
+      print("No such asset...")
+      return
+    
+    asset = Asset()
+    asset.userid = body['user_id']
+    asset.assetname = body['asset_name']
+    asset.bucketkey = body['bucket_key']
+    print("userid:", asset.userid)
+    print("asset name:", asset.assetname)
+    print("bucket key:", asset.bucketkey)
+
+    binary = base64.b64decode(body['data'])
+    fp = io.BytesIO(binary)
+    with fp:
+      image = img.imread(fp, format='jpg')
+      plt.imshow(image)
+      plt.show()
+  
+
+  except Exception as e:
+    logging.error("download() failed:")
+    logging.error("url: " + url)
+    logging.error(e)
+    return
   
 ###################################################################
 #
@@ -492,7 +564,8 @@ def picfusion(baseurl):
     assetid = int(input())
     current_index = next((index for (index, d) in enumerate(assets) if d.assetid == assetid), None)
     
-    download(baseurl, assetid, True)
+    # download(baseurl, assetid, True)
+    display(baseurl, assetid)
     
     # After displaying the picture, 
     #prompt the user to either display the next picture, or the previous picture, or exit
@@ -517,7 +590,8 @@ def picfusion(baseurl):
       else:
         print("Invalid input. Please enter 'n', 'p', or 'e'.")
         continue
-      download(baseurl, assets[current_index].assetid, True)
+      # download(baseurl, assets[current_index].assetid, True)
+      display(baseurl, assets[current_index].assetid)
 
   except Exception as e:
     logging.error("picfusion() failed:")
