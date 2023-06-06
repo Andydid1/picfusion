@@ -3,28 +3,7 @@
 // AWS S3 and RDS to provide clients data for building a 
 // simple photo application for photo storage and viewing.
 //
-// Project 02 for CS 310, Spring 2023.
-//
-// Authors:
-//  YOUR NAME
-//  Prof. Joe Hummel (initial template)
-//  Northwestern University
-//  Spring 2023
-//
-// References:
-// Node.js: 
-//   https://nodejs.org/
-// Express: 
-//   https://expressjs.com/
-// MySQL: 
-//   https://expressjs.com/en/guide/database-integration.html#mysql
-//   https://github.com/mysqljs/mysql
-// AWS SDK with JS:
-//   https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/index.html
-//   https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/getting-started-nodejs.html
-//   https://docs.aws.amazon.com/AWSJavaScriptSDK/v3/latest/clients/client-s3/
-//   https://docs.aws.amazon.com/sdk-for-javascript/v3/developer-guide/javascript_s3_code_examples.html
-//
+
 
 const express = require('express');
 const app = express();
@@ -67,6 +46,7 @@ var bucket = require('./api_bucket.js');
 var download = require('./api_download.js');
 var user = require('./api_user.js');
 var upload = require('./api_upload.js');
+var interactions = require('./api_interactions.js');
 
 app.get('/stats', stats.get_stats);  //app.get('/stats', (req, res) => {...});
 app.get('/users', users.get_users);  //app.get('/users', (req, res) => {...});
@@ -75,3 +55,6 @@ app.get('/bucket', bucket.get_bucket);  //app.get('/bucket?startafter=bucketkey'
 app.get('/download/:assetid', download.get_download); //app.get('/download/:assetid', (req, res) => {...});
 app.put('/user', user.put_user);
 app.post('/upload/:userid', upload.post_image);
+
+// ...
+app.post('/interactions', interactions.post_interaction);
