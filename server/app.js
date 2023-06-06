@@ -58,3 +58,4 @@ app.post('/upload/:userid', upload.post_image);
 
 // ...
 app.post('/interactions', interactions.post_interaction);
+app.get('/interactions/:assetid', interactions.get_interaction);

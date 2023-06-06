@@ -84,6 +84,7 @@ def prompt():
   print("   6 => bucket contents")
   print("   7 => upload a photo")
   print("   8 => Pico Pico")
+  print("   9 => Pico like")
 
   cmd = int(input())
   return cmd
@@ -601,106 +602,140 @@ def picfusion(baseurl):
     logging.error(e)
     return
 
-##############################################################################
-# # picfusion with interaction
-# def picfusion(baseurl):
-#   """
-#   Browse through the assets in the database
+##########################################################################
+##
+##
+def picfusion_interact(baseurl):
+  """
+  Browse through the assets in the database
   
-#   Parameters
-#   ----------
-#   baseurl: baseurl for web service
+  Parameters
+  ----------
+  baseurl: baseurl for web service
   
-#   Returns
-#   -------
-#   nothing
-#   """
+  Returns
+  -------
+  nothing
+  """
 
-#   try:
-#     #
-#     # call the web service to get the first ten assets:
-#     #
-#     api = '/assets'
-#     url = baseurl + api
+  try:
 
-#     res = requests.get(url)
+    api = '/assets'
+    url = baseurl + api
 
-#     #
-#     # let's look at what we got back:
-#     #
-#     if res.status_code != 200:
-#       # failed:
-#       print("Failed with status code:", res.status_code)
-#       print("url: " + url)
-#       if res.status_code == 400:  # we'll have an error message
-#         body = res.json()
-#         print("Error message:", body["message"])
-#       #
-#       return
+    res = requests.get(url)
 
-#     #
-#     # deserialize and extract assets:
-#     #
-#     body = res.json()
-#     #
-#     # let's map each dictionary into a Asset object:
-#     #
-#     assets = []
-#     for row in body["data"]:
-#       asset = jsons.load(row, Asset)
-#       assets.append(asset)
-#     #
-#     # Now we can think OOP:
-#     #
-#     for asset in assets:
-#       print(asset.assetid)
-#       print(" ", asset.assetname)
+    if res.status_code != 200:
+      # failed:
+      print("Failed with status code:", res.status_code)
+      print("url: " + url)
+      if res.status_code == 400:  # we'll have an error message
+        body = res.json()
+        print("Error message:", body["message"])
+      #
+      return
 
-#     #
-#     # Prompt the user to enter the assetid to display the picture
-#     #
-#     print("Enter asset id to display the picture>")
-#     assetid = int(input())
-#     current_index = next((index for (index, d) in enumerate(assets) if d.assetid == assetid), None)
+
+    body = res.json()
+    #
+    # map
+    #
+    assets = []
+    for row in body["data"]:
+      asset = jsons.load(row, Asset)
+      assets.append(asset)
+
+    for asset in assets:
+      print(asset.assetid)
+      print(" ", asset.assetname)
+      # Fetch interaction data for the asset
+      interaction_url = baseurl + '/interactions/' + str(asset.assetid)
+      interaction_res = requests.get(interaction_url)
+      if interaction_res.status_code == 200:
+        interaction_data = interaction_res.json()
+        print("Likes:", interaction_data['interaction_type'])
+    #
+    # Prompt the user to enter the assetid to display the picture
+    #
+    print("Enter asset id to display the picture>")
+    assetid = int(input())
+    current_index = next((index for (index, d) in enumerate(assets) if d.assetid == assetid), None)
     
+    # download(baseurl, assetid, True)
+    display(baseurl, assetid)
+    
+    # After displaying the picture, 
+    #prompt the user to either display the next picture, or the previous picture, or exit
+    #
+    while True:
+      # print("Enter 'n' to display the next picture, 'p' to display the previous picture, or 'e' to exit>")
+      print("Enter 'n' to display the next picture, 'p' to display the previous picture, '1' to like, '2' to dislike, or 'e' to exit>")
 
-#     image = img.imread(assets[current_index].assetname)
-#     plt.imshow(image)
-#     plt.show(block=False)  # make plt.show() non-blocking
-#     plt.pause(1)  # pause for a while for the user to see the image
-#     plt.close()  # close the figure window
+      action = input().strip().lower()
+      if action == 'n':
+        if current_index < len(assets) - 1:
+          current_index += 1
+        else:
+          print("This is the last picture. Selecting 'n' will take you to the first picture.")
+          current_index = 0
+      elif action == 'p':
+        if current_index > 0:
+          current_index -= 1
+        else:
+          print("This is the first picture. Selecting 'p' will take you to the last picture.")
+          current_index = len(assets) - 1
+      elif action == '1':
+            send_interaction(baseurl, assets[current_index].assetid, 1)
+      elif action == '2':
+            send_interaction(baseurl, assets[current_index].assetid, -1)      
+      elif action == 'e':
+        break
+      else:
+        print("Invalid input. Please enter 'n', 'p', '1', '2', or 'e'.")
+        continue
+      # download(baseurl, assets[current_index].assetid, True)
+      display(baseurl, assets[current_index].assetid)
 
-#     #
-#     # After displaying the picture, prompt the user to either display the next picture, or the previous picture, or exit
-#     #
-#     while True:
-#       print("Enter 'n' to display the next picture, 'p' to display the previous picture, 'l' to like, 'd' to dislike, or 'e' to exit>")
-#       action = input().strip().lower()
-#       if action == 'n':
-#         if current_index < len(assets) - 1:
-#           current_index += 1
-#         else:
-#           print("This is the last picture. Selecting 'n' will take you to the first picture.")
-#           current_index = 0
-#       elif action == 'p':
-#         if current_index > 0:
-#           current_index -= 1
-#         else:
-#           print("This is the first picture. Selecting 'p' will take you to the last picture.")
-#           current_index = len(assets) - 1
-#       elif action == 'l':
-#         # Make a POST request to the /interactions endpoint to record the like
-#         interaction_url = baseurl + '/interactions'
-#         interaction_data = {
-#           'user_id': 1,  # Replace with the actual user_id
-#           'assetid': assets[current_index].assetid,
-#           'interaction_type': 1  # 1 for like
-#         }
-#         requests.post(interaction_url, data=interaction_data)
-#         print
+  except Exception as e:
+    logging.error("picfusion() failed:")
+    logging.error("url: " + url)
+    logging.error(e)
+    return
 
-
-
+##########################################################################
+## 
+def send_interaction(baseurl, assetid, interaction_type):
+    """
+    Send a POST request to the server to record the user's interaction with an asset.
+    
+    Parameters
+    ----------
+    baseurl: baseurl for web service
+    assetid: target asset id
+    interaction_type: 1 for like, -1 for dislike
+    
+    Returns
+    -------
+    nothing
+    """
+    try:
+        api = '/interactions'
+        url = baseurl + api
+        data = {
+            'assetid': assetid,
+            'interaction_type': interaction_type
+        }
+        res = requests.post(url, json=data)
+        if res.status_code != 200:
+            print("Failed with status code:", res.status_code)
+            print("url: " + url)
+            if res.status_code == 400:  # we'll have an error message
+                body = res.json()
+                print("Error message:", body["message"])
+    except Exception as e:
+        logging.error("send_interaction() failed:")
+        logging.error("url: " + url)
+        logging.error(e)
 
 #########################################################################
 # main
@@ -776,6 +811,8 @@ while cmd != 0:
     upload_handle(baseurl)
   elif cmd == 8:
     picfusion(baseurl)
+  elif cmd == 9:
+    picfusion_interact(baseurl)
   else:
     print("** Unknown command, try again...")
   #
