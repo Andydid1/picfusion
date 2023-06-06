@@ -221,7 +221,7 @@ def users(baseurl):
 #
 # assets
 #
-def assets(baseurl):
+def assets(baseurl, display=False):
   """
   Prints out all the assets in the database
   
@@ -273,10 +273,14 @@ def assets(baseurl):
     #
     # Now we can think OOP:
     #
-    # for asset in assets:
-    #   print(asset.assetid)
-    #   print(" ", asset.userid)
-    #   print(" ", asset.assetname)
+    if (display):
+      for asset in assets:
+        print(asset.assetid)
+        print(" UserID: ", asset.userid)
+        print(" AssetName:", asset.assetname)
+        print(" Likes:", asset.like_count)
+        print(" Location:", asset.formatted_addr)
+
     #   if asset.formatted_addr: print(" ", asset.formatted_addr) 
       # print(" ", asset.bucketkey)
     
@@ -750,7 +754,7 @@ while cmd != 0:
   elif cmd == 2:
     users(baseurl)
   elif cmd == 3:
-    assets(baseurl)
+    assets(baseurl, True)
   elif cmd == 4:
     print("Enter asset id>")
     assetid = int(input())
