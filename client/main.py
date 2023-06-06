@@ -492,13 +492,7 @@ def picfusion(baseurl):
     assetid = int(input())
     current_index = next((index for (index, d) in enumerate(assets) if d.assetid == assetid), None)
     
-
-    image = img.imread(assets[current_index].assetname)
-    plt.imshow(image)
-    plt.show(block=False)  # make plt.show() non-blocking
-    plt.pause(3)  # pause for a while for the user to see the image
-    plt.close()  # close the figure window
-
+    download(baseurl, assetid, True)
     
     # After displaying the picture, 
     #prompt the user to either display the next picture, or the previous picture, or exit
@@ -523,11 +517,8 @@ def picfusion(baseurl):
       else:
         print("Invalid input. Please enter 'n', 'p', or 'e'.")
         continue
-      image = img.imread(assets[current_index].assetname)
-      plt.imshow(image)
-      plt.show(block=False)  
-      plt.pause(3)  
-      plt.close()  
+      download(baseurl, assets[current_index].assetid, True)
+
   except Exception as e:
     logging.error("picfusion() failed:")
     logging.error("url: " + url)
