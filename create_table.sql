@@ -31,13 +31,13 @@ CREATE TABLE assets
 
 CREATE TABLE metadata
 (
-	metadata_id	int,
+	metadata_id	int not null AUTO_INCREMENT,
 	assetid	int not null,
-	formatted_addr	varchar(128) not null,
-	postal_code	int not null,
-	city	varchar(32) not null,
-	state	varchar(32) not null,
-	country	varchar(32) not null,
+	formatted_addr	varchar(128),
+	postal_code	int,
+	city	varchar(32) ,
+	state	varchar(32) ,
+	country	varchar(32) ,
 	latitude	float not null,
 	longitude	float not null,
     PRIMARY KEY (metadata_id)

@@ -27,6 +27,7 @@ from configparser import ConfigParser
 import matplotlib.pyplot as plt
 import matplotlib.image as img
 
+TEST_USER_ID = 1
 
 ###################################################################
 #
@@ -80,6 +81,7 @@ def prompt():
   print("   4 => download")
   print("   5 => download and display")
   print("   6 => bucket contents")
+  print("   7 => upload a photo")
 
   cmd = int(input())
   return cmd
@@ -412,6 +414,32 @@ def bucket(baseurl, start_after=None):
     logging.error(e)
     return
 
+def upload_handle(baseurl):
+  # Get info
+  print("Enter the file name of the photo>")
+  file_name = input()
+  if not os.path.exists(file_name):
+    print("File not exist")
+    return 
+  print("Where was the photo taken? A blurry location like 'near Chicago' is also accpetable>")
+  formatted_addr = input()
+
+  api = '/upload/'
+  url = baseurl + api + str(TEST_USER_ID)
+
+  # Upload file
+  # try:
+  f = open(file_name, 'rb')
+  E = base64.b64encode(f.read())
+  S = E.decode()
+  f.close()
+
+  body = {'data':S, 'formatted_addr':formatted_addr, "assetname":file_name}
+  res = requests.post(url, json=body)
+  print(res.text)
+
+
+
 #########################################################################
 # main
 #
@@ -482,6 +510,8 @@ while cmd != 0:
         last_bucket_key = bucket(baseurl, last_bucket_key)
       else:
         break
+  elif cmd == 7:
+    upload_handle(baseurl)
   else:
     print("** Unknown command, try again...")
   #

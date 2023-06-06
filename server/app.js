@@ -66,7 +66,7 @@ var assets = require('./api_assets.js');
 var bucket = require('./api_bucket.js');
 var download = require('./api_download.js');
 var user = require('./api_user.js');
-var image = require('./api_image.js');
+var upload = require('./api_upload.js');
 
 app.get('/stats', stats.get_stats);  //app.get('/stats', (req, res) => {...});
 app.get('/users', users.get_users);  //app.get('/users', (req, res) => {...});
@@ -74,4 +74,4 @@ app.get('/assets', assets.get_assets);  //app.get('/assets', (req, res) => {...}
 app.get('/bucket', bucket.get_bucket);  //app.get('/bucket?startafter=bucketkey', (req, res) => {...});
 app.get('/download/:assetid', download.get_download); //app.get('/download/:assetid', (req, res) => {...});
 app.put('/user', user.put_user);
-app.post('/image/:userid', image.post_image);
+app.post('/upload/:userid', upload.post_image);
