@@ -410,8 +410,10 @@ def display(baseurl, assetid):
     with fp:
       image = img.imread(fp, format='jpg')
       plt.imshow(image)
-      plt.show()
-  
+      # plt.show()
+      plt.show(block=False)  # make plt.show() non-blocking
+      plt.pause(3)  # pause for a while for the user to see the image
+      plt.close()  # close the figure window
 
   except Exception as e:
     logging.error("download() failed:")
