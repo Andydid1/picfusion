@@ -94,6 +94,7 @@ def prompt():
   print("   7 => upload a photo")
   print("   8 => Pico Pico")
   print("   9 => Pico like")
+  print("   10 => customed display")
 
   cmd = int(input())
   return cmd
@@ -559,7 +560,7 @@ def picfusion(baseurl):
     #
     # Prompt the user to enter the assetid to display the picture
     #
-    print("Enter asset id to display the picture>")
+    print(">> Enter asset id to display the picture:")
     assetid = int(input())
     current_index = next((index for (index, d) in enumerate(asset_lst) if d.assetid == assetid), None)
     
@@ -567,10 +568,10 @@ def picfusion(baseurl):
     display(baseurl, assetid)
     
     # After displaying the picture, 
-    #prompt the user to either display the next picture, or the previous picture, or exit
+    # prompt the user to either display the next picture, or the previous picture, or exit
     #
     while True:
-      print("Enter 'n' to display the next picture, 'p' to display the previous picture, or 'e' to exit>")
+      print(">> Enter 'n' to display the next picture, 'p' to display the previous picture, or 'e' to exit:")
       action = input().strip().lower()
       if action == 'n':
         if current_index < len(asset_lst) - 1:
@@ -624,7 +625,7 @@ def picfusion_interact(baseurl):
     #
     # Prompt the user to enter the assetid to display the picture
     #
-    print("Enter asset id to display the picture>")
+    print(">> Enter asset id to display the picture:")
     assetid = int(input())
     current_index = next((index for (index, d) in enumerate(asset_lst) if d.assetid == assetid), None)
     
@@ -636,25 +637,31 @@ def picfusion_interact(baseurl):
     #
     while True:
       # print("Enter 'n' to display the next picture, 'p' to display the previous picture, or 'e' to exit>")
-      print("Enter 'n' to display the next picture, 'p' to display the previous picture, '1' to like, '2' to dislike, or 'e' to exit>")
-
+      print(">>> Enter 'n' to display the next picture, 'p' to display the previous picture, '1' to like, '2' to dislike, or 'e' to exit:")
+      print(">>> '1' to like, '2' to dislike,")
+      print(">>> 'ASC' to ascending order display, 'DESC' to descending order display, ")
+      print(">>> 'e' to exit:")
       action = input().strip().lower()
       if action == 'n':
         if current_index < len(asset_lst) - 1:
           current_index += 1
         else:
-          print("This is the last picture. Selecting 'n' will take you to the first picture.")
+          print("[This is the last picture. Selecting 'n' to the first picture.]")
           current_index = 0
       elif action == 'p':
         if current_index > 0:
           current_index -= 1
         else:
-          print("This is the first picture. Selecting 'p' will take you to the last picture.")
+          print("[This is the first picture. Selecting 'p' to the last picture.]")
           current_index = len(asset_lst) - 1
       elif action == '1':
             send_interaction(baseurl, asset_lst[current_index].assetid, 1)
       elif action == '2':
-            send_interaction(baseurl, asset_lst[current_index].assetid, -1)      
+            send_interaction(baseurl, asset_lst[current_index].assetid, -1)   
+      elif action == 'asc':
+            display_assets_by_likes(baseurl, 'ASC')
+      elif action == 'desc':
+            display_assets_by_likes(baseurl, 'DESC')
       elif action == 'e':
         break
       else:
@@ -702,6 +709,63 @@ def send_interaction(baseurl, assetid, interaction_type):
         logging.error("send_interaction() failed:")
         logging.error("url: " + url)
         logging.error(e)
+      
+#########################################################################
+# customed display
+def customed_display(baseurl):
+    """
+    Customized Display
+
+    Parameters
+    ----------
+    baseurl: baseurl for web service
+  
+    Returns
+    -------
+    nothing
+    """
+    while True:
+        print(">> Enter 'ASC' for ascending order, 'DESC' for descending order, or 'e' to exit:")
+        order = input().strip().upper()
+        if order in ['ASC', 'DESC']:
+            display_assets_by_likes(baseurl, order)
+        elif order == 'E':
+            break
+        else:
+            print("Invalid input. Please enter 'ASC', 'DESC', or 'e'.")
+##########################################################################
+# 
+#
+def display_assets_by_likes(baseurl, order):
+    """
+    Display assets ordered by likes in ascending or descending order
+
+    Parameters
+    ----------
+    baseurl: baseurl for web service
+    order: str, either 'ASC' or 'DESC'
+  
+    Returns
+    -------
+    nothing
+    """
+    try:
+        # Get all assets
+        asset_lst = assets(baseurl)
+
+        # Sort assets by like_count
+        asset_lst.sort(key=lambda x: x.like_count, reverse=(order == 'DESC'))
+
+        # Display sorted assets
+        for asset in asset_lst:
+            print(asset.assetid)
+            print(" ", asset.assetname)
+            print("  Likes:", asset.like_count)
+
+    except Exception as e:
+        logging.error("display_assets_by_likes() failed:")
+        logging.error(e)
+        return
 
 #########################################################################
 # main
@@ -779,6 +843,8 @@ while cmd != 0:
     picfusion(baseurl)
   elif cmd == 9:
     picfusion_interact(baseurl)
+  elif cmd == 10:
+    customed_display(baseurl)
   else:
     print("** Unknown command, try again...")
   #
