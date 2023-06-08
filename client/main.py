@@ -15,7 +15,6 @@
 import requests  # calling web service
 import jsons  # relational-object mapping
 
-import uuid
 import pathlib
 import logging
 import sys
@@ -24,6 +23,7 @@ import base64
 import io
 import utils
 import hashlib
+from getpass import getpass
 
 from configparser import ConfigParser
 
@@ -85,75 +85,13 @@ def prompt():
   Command number entered by user (0, 1, 2, ...)
   """
   print()
-  print(">> Enter a command:")
-  print("   0 => end")
-  print("   1 => stats")
-  print("   2 => users")
-  print("   3 => assets")
-  print("   4 => download")
-  print("   5 => download and display")
-  print("   6 => bucket contents")
-  print("   7 => upload a photo")
-  print("   8 => Pico Pico")
-  print("   9 => Pico like")
-  print("   10 => customed display")
+  print("==== Main Menu ====\n")
+  print("   0 => End")
+  print("   1 => Upload a Pic")
+  print("   2 => Pico Pico")
 
   cmd = int(input())
   return cmd
-
-
-###################################################################
-#
-# stats
-#
-def stats(baseurl):
-  """
-  Prints out S3 and RDS info: bucket status, # of users and 
-  assets in the database
-  
-  Parameters
-  ----------
-  baseurl: baseurl for web service
-  
-  Returns
-  -------
-  nothing
-  """
-
-  try:
-    #
-    # call the web service:
-    #
-    api = '/stats'
-    url = baseurl + api
-
-    res = requests.get(url)
-    #
-    # let's look at what we got back:
-    #
-    if res.status_code != 200:
-      # failed:
-      print("Failed with status code:", res.status_code)
-      print("url: " + url)
-      if res.status_code == 400:  # we'll have an error message
-        body = res.json()
-        print("Error message:", body["message"])
-      #
-      return
-    #
-    # deserialize and extract stats:
-    #
-    body = res.json()
-    #
-    print("bucket status:", body["message"])
-    print("# of users:", body["db_numUsers"])
-    print("# of assets:", body["db_numAssets"])
-
-  except Exception as e:
-    logging.error("stats() failed:")
-    logging.error("url: " + url)
-    logging.error(e)
-    return
   
 ###################################################################
 #
@@ -232,81 +170,6 @@ def assets(baseurl, display=False):
 
 ###################################################################
 #
-# download
-#
-def download(baseurl, assetid, display=False):
-  """
-  Download selected asset
-  
-  Parameters
-  ----------
-  baseurl: baseurl for web service
-  assetid: target asset id
-  display: whether to display the item after download
-  
-  Returns
-  -------
-  nothing
-  """
-
-  try:
-    #
-    # call the web service:
-    #
-    api = '/download/' + str(assetid)
-    url = baseurl + api
-
-    res = requests.get(url)
-
-    #
-    # let's look at what we got back:
-    #
-    if res.status_code != 200:
-      # failed:
-      print("Failed with status code:", res.status_code)
-      print("url: " + url)
-      if res.status_code == 400:  # we'll have an error message
-        body = res.json()
-        print("Error message:", body["message"])
-      #
-      return
-
-    #
-    # deserialize and extract asset:
-    #
-    body = res.json()
-    if body['message'] == "no such asset...":
-      print("No such asset...")
-      return
-    
-    asset = Asset()
-    asset.userid = body['user_id']
-    asset.assetname = body['asset_name']
-    asset.bucketkey = body['bucket_key']
-    print("userid:", asset.userid)
-    print("asset name:", asset.assetname)
-    print("bucket key:", asset.bucketkey)
-
-    binary = base64.b64decode(body['data'])
-    with open(asset.assetname, "wb") as f:
-      f.write(binary)
-
-    print("Downloaded from S3 and saved as '", asset.assetname,"'")
-
-    if display:
-      image = img.imread(asset.assetname)
-      plt.imshow(image)
-      plt.show()
-  
-
-  except Exception as e:
-    logging.error("download() failed:")
-    logging.error("url: " + url)
-    logging.error(e)
-    return
-
-###################################################################
-#
 # display
 #
 def display(baseurl, assetid):
@@ -366,6 +229,7 @@ def display(baseurl, assetid):
     with fp:
       image = img.imread(fp, format='jpg')
       plt.imshow(image)
+      plt.title(asset.assetname)
       # plt.show()
       plt.show(block=False)  # make plt.show() non-blocking
       plt.pause(3)  # pause for a while for the user to see the image
@@ -373,74 +237,6 @@ def display(baseurl, assetid):
 
   except Exception as e:
     logging.error("download() failed:")
-    logging.error("url: " + url)
-    logging.error(e)
-    return
-  
-###################################################################
-#
-# bucket
-#
-def bucket(baseurl, start_after=None):
-  """
-  Download selected asset
-  
-  Parameters
-  ----------
-  baseurl: baseurl for web service
-  assetid: target asset id
-  display: whether to display the item after download
-  
-  Returns
-  -------
-  last_bucket_key: bucket key of the last content in current page
-  """
-
-  try:
-    #
-    # call the web service:
-    #
-    api = '/bucket'
-    url = baseurl + api
-    params = {}
-    if start_after is not None:
-      params['startafter'] = start_after
-
-    res = requests.get(url, params=params)
-
-    #
-    # let's look at what we got back:
-    #
-    if res.status_code != 200:
-      # failed:
-      print("Failed with status code:", res.status_code)
-      print("url: " + url)
-      if res.status_code == 400:  # we'll have an error message
-        body = res.json()
-        print("Error message:", body["message"])
-      #
-      return None
-    
-    body = res.json()
-    
-    if len(body['data']) == 0:
-      return None
-    
-    bucket_items = []
-    for row in body["data"]:
-      bucket_item = jsons.load(row, BucketItem)
-      bucket_items.append(bucket_item)
-    
-    for bucket_item in bucket_items:
-      print(bucket_item.Key)
-      print(" ", bucket_item.LastModified)
-      print(" ", bucket_item.Size)
-    
-    return bucket_items[-1].Key
-
-
-  except Exception as e:
-    logging.error("bucket() failed:")
     logging.error("url: " + url)
     logging.error(e)
     return
@@ -454,9 +250,10 @@ def upload_handle(baseurl):
     return 
   print("Where was the photo taken? A blurry location like 'near Chicago' is also accpetable>")
   formatted_addr = input()
+  print("Uploading!! Please be patient...")
 
   api = '/upload/'
-  url = baseurl + api + str(TEST_USER_ID)
+  url = baseurl + api + str(USER_ID)
 
   # Upload file
   # try:
@@ -467,7 +264,7 @@ def upload_handle(baseurl):
 
   body = {'data':S, 'formatted_addr':formatted_addr, "assetname":file_name}
   res = requests.post(url, json=body)
-  print(res.text)
+  print(res.json()['message'])
 
 def get_location(location):
   try:
@@ -514,8 +311,8 @@ def sort_handle(asset_lst):
       elif sort_type == 'd':
         print(">>> Please provide a location (e.g near Chicago):")
         location = input()
-        print(">>> [a]scend  [d]escend")
-        order = input().strip().lower() == 'a'
+        print(">>> [f]urthest  [c]losest first")
+        order = input().strip().lower() == 'f'
         target_latitude, target_longitude = get_location(location)
         return utils.sort_by_geo(asset_lst, target_latitude, target_longitude, order)
       else:
@@ -524,20 +321,18 @@ def sort_handle(asset_lst):
 
 def display_lst(asset_lst, current_index):
   left = max(0, current_index - 2)
-  right = min(len(asset_lst) - 1, max(current_index + 2, 5))
-  print("==== Photos ====")
-  print ("{:<15} {:<8} {:<15}".format('Name', 'Likes', 'Location'))
+  right = min(len(asset_lst) - 1, max(current_index + 2, 4))
+  print("==== Pics ====")
+  print ("{:<25} {:<8} {:<25}".format('Name', 'Likes', 'Location'))
   for i in range(left, right+1):
     asset = asset_lst[i]
-    output = "{:<15} {:<8} {:<15}".format(asset.assetname, asset.like_count, asset.formatted_addr)
+    output = "{:<25} {:<8} {:<25}".format(asset.assetname, asset.like_count, asset.formatted_addr)
     if i == current_index:
       output += "  <=="
     print(output)
 
-##########################################################################
-##
-##
-def picfusion_interact(baseurl):
+
+def picfusion(baseurl):
   """
   Browse through the assets in the database
   
@@ -553,15 +348,17 @@ def picfusion_interact(baseurl):
   try:
     asset_lst = assets(baseurl)
     current_index = 0
-
+    if len(asset_lst) == 0:
+      print("No pics in the website. Upload one!")
+      return
     # Main Loop
     while True:
       display_lst(asset_lst, current_index)
       display(baseurl, asset_lst[current_index].assetid)
-      print("==== Operations ====")
-      print(">>> [n]ext  [p]rev")
-      print(">>> [l]ike  [d]islike")
-      print(">>> [s]ort  [e]xit")
+      print("==== Operations ====\n")
+      print(" [n]ext  [p]rev")
+      print(" [l]ike  [d]islike")
+      print(" [s]ort  [e]xit")
       action = input().strip().lower()
       if action == 'n':
         if current_index < len(asset_lst) - 1:
@@ -577,8 +374,10 @@ def picfusion_interact(baseurl):
           current_index = len(asset_lst) - 1
       elif action == 'l':
         send_interaction(baseurl, asset_lst[current_index].assetid, 1)
+        asset_lst = assets(baseurl)
       elif action == 'd':
         send_interaction(baseurl, asset_lst[current_index].assetid, -1)   
+        asset_lst = assets(baseurl)
       elif action == 's':
         asset_lst = sort_handle(asset_lst)
         current_index = 0
@@ -614,6 +413,7 @@ def send_interaction(baseurl, assetid, interaction_type):
         api = '/interactions'
         url = baseurl + api
         data = {
+            'userid': USER_ID,
             'assetid': assetid,
             'interaction_type': interaction_type
         }
@@ -628,64 +428,6 @@ def send_interaction(baseurl, assetid, interaction_type):
         logging.error("send_interaction() failed:")
         logging.error("url: " + url)
         logging.error(e)
-      
-#########################################################################
-# customed display
-def customed_display(baseurl):
-    """
-    Customized Display
-
-    Parameters
-    ----------
-    baseurl: baseurl for web service
-  
-    Returns
-    -------
-    nothing
-    """
-    while True:
-        print(">> Enter 'ASC' for ascending order, 'DESC' for descending order, or 'e' to exit:")
-        order = input().strip().upper()
-        if order in ['ASC', 'DESC']:
-            display_assets_by_likes(baseurl, order)
-        elif order == 'E':
-            break
-        else:
-            print("Invalid input. Please enter 'ASC', 'DESC', or 'e'.")
-
-##########################################################################
-# 
-#
-def display_assets_by_likes(baseurl, order):
-    """
-    Display assets ordered by likes in ascending or descending order
-
-    Parameters
-    ----------
-    baseurl: baseurl for web service
-    order: str, either 'ASC' or 'DESC'
-  
-    Returns
-    -------
-    nothing
-    """
-    try:
-        # Get all assets
-        asset_lst = assets(baseurl)
-
-        # Sort assets by like_count
-        asset_lst.sort(key=lambda x: x.like_count, reverse=(order == 'DESC'))
-
-        # Display sorted assets
-        for asset in asset_lst:
-            print(asset.assetid)
-            print(" ", asset.assetname)
-            print("  Likes:", asset.like_count)
-
-    except Exception as e:
-        logging.error("display_assets_by_likes() failed:")
-        logging.error(e)
-        return
     
 #########################################################################
 # sign in
@@ -761,19 +503,21 @@ def login_prompt(baseurl):
       
       if signinOption == 1:
         email = input("Please Enter your Email: ")
-        password = input("Please Enter your Password: ")
+        password = getpass("Please Enter your Password: ")
         
         encrypted_password = hashlib.md5(password.encode()).hexdigest()
         
         result = signin(baseurl, email, encrypted_password)
         if result:
           logged_in = True
+        else:
+          return False
 
         
       elif signinOption == 2:
         email = input("Please Enter your email: ")
         username = input("Please Enter a User Name: ")
-        user_password = input("Please Enter your Password: ")
+        user_password = getpass("Please Enter your Password: ")
     
         encrypted_user_password = hashlib.md5(user_password.encode()).hexdigest()
     
@@ -782,7 +526,7 @@ def login_prompt(baseurl):
   except Exception as e:
     logging.error("register() failed:")
     logging.error(e)
-    return
+    return False
 
 
 
@@ -840,36 +584,10 @@ while USER_ID is None:
 cmd = prompt()
 
 while USER_ID is not None and cmd != 0:
-  #
   if cmd == 1:
-    stats(baseurl)
-  elif cmd == 2:
-    users(baseurl)
-  elif cmd == 3:
-    assets(baseurl, True)
-  elif cmd == 4:
-    print("Enter asset id>")
-    assetid = int(input())
-    download(baseurl, assetid)
-  elif cmd == 5:
-    print("Enter asset id>")
-    assetid = int(input())
-    download(baseurl, assetid, True)
-  elif cmd == 6:
-    last_bucket_key = bucket(baseurl, None)
-    while last_bucket_key is not None:
-      print("another page? [y/n]")
-      another_page = input()
-      if another_page == "y":
-        last_bucket_key = bucket(baseurl, last_bucket_key)
-      else:
-        break
-  elif cmd == 7:
     upload_handle(baseurl)
-  elif cmd == 9:
-    picfusion_interact(baseurl)
-  elif cmd == 10:
-    customed_display(baseurl)
+  elif cmd == 2:
+    picfusion(baseurl)
   else:
     print("** Unknown command, try again...")
   #
