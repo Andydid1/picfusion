@@ -39,29 +39,18 @@ app.get('/', (req, res) => {
 //
 // service functions:
 //
-var stats = require('./api_stats.js');
-var users = require('./api_users.js');
 var assets = require('./api_assets.js');
-var bucket = require('./api_bucket.js');
 var download = require('./api_download.js');
-var user = require('./api_user.js');
 var upload = require('./api_upload.js');
 var interactions = require('./api_interactions.js');
 var signInAndRegister = require('./api_signin_register.js');
 var location = require('./api_location.js')
 
-app.get('/stats', stats.get_stats);  //app.get('/stats', (req, res) => {...});
-app.get('/users', users.get_users);  //app.get('/users', (req, res) => {...});
 app.get('/assets', assets.get_assets);  //app.get('/assets', (req, res) => {...});
-app.get('/bucket', bucket.get_bucket);  //app.get('/bucket?startafter=bucketkey', (req, res) => {...});
 app.get('/download/:assetid', download.get_download); //app.get('/download/:assetid', (req, res) => {...});
-app.put('/user', user.put_user);
 app.post('/upload/:userid', upload.post_image);
-
-// ...
 app.post('/interactions', interactions.post_interaction);
 app.get('/interactions/:assetid', interactions.get_interaction);
-
 app.post('/signin', signInAndRegister.post_signin); // app.post('/image/:userid', (req, res) => {...});
 app.post('/register', signInAndRegister.post_register); // app.post('/image/:userid', (req, res) => {...});
 app.get('/location', location.location);

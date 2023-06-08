@@ -13,7 +13,7 @@ exports.post_signin = async (req, res) => {
 
     var data = req.body;  // data => JS object
 
-    var sql = "Select user_password From users Where email = ?;";
+    var sql = "Select user_password, userid From users Where email = ?;";
     var params = [data.email];
 
     var rds_response = new Promise((resolve, reject) => {
@@ -29,7 +29,8 @@ exports.post_signin = async (req, res) => {
     
     if (results.length == 0) {
       res.status(202).json({
-          "message": "no such user..."
+          "message": "no such user...",
+          "userid": -1
         });
       return;
     }
@@ -37,11 +38,13 @@ exports.post_signin = async (req, res) => {
     if (results.length == 1) {
       if (data.password == results[0].user_password) {
         res.status(201).json({
-          "message": "Success!"
+          "message": "Success!",
+          "userid": results[0].userid
         });
       } else {
         res.status(203).json({
-          "message": "wrong password..."
+          "message": "wrong password...",
+          "userid": -1
         });
       }
       return;
@@ -50,6 +53,7 @@ exports.post_signin = async (req, res) => {
   catch (err) {
     res.status(400).json({
       "message": err.message,
+      "userid": -1
     });
   }//catch
 

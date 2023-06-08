@@ -47,6 +47,6 @@ CREATE TABLE interactions
 (
 	user_id	int not null,
 	assetid	int not null,
-	interaction_type int not null
+	interaction_type int not null,
     UNIQUE (user_id, assetid)
 );
