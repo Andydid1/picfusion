@@ -1,9 +1,9 @@
 def euclidean_dis(lhs_1, lhs_2, rhs_1, rhs_2):
   return (rhs_1 - lhs_1) ** 2 + (rhs_2 - lhs_2) ** 2 
 
-def sort_by_geo(asset_lst, target_lati, target_long):
+def sort_by_geo(asset_lst, target_lati, target_long, order):
   dis_lst = [(euclidean_dis(asset.latitude, asset.longitude, target_lati, target_long), asset) for asset in asset_lst]
-  sorted_lst = sorted(dis_lst, key=lambda x: x[0])
+  sorted_lst = sorted(dis_lst, key=lambda x: x[0], reverse=order)
   return [x[1] for x in sorted_lst]
 
 # asset1 = Asset()

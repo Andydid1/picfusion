@@ -23,6 +23,7 @@ import os
 import base64
 import io
 import utils
+import hashlib
 
 from configparser import ConfigParser
 
@@ -30,6 +31,7 @@ import matplotlib.pyplot as plt
 import matplotlib.image as img
 
 TEST_USER_ID = 1
+USER_ID = None
 
 ###################################################################
 #
@@ -149,72 +151,6 @@ def stats(baseurl):
 
   except Exception as e:
     logging.error("stats() failed:")
-    logging.error("url: " + url)
-    logging.error(e)
-    return
-
-
-###################################################################
-#
-# users
-#
-def users(baseurl):
-  """
-  Prints out all the users in the database
-  
-  Parameters
-  ----------
-  baseurl: baseurl for web service
-  
-  Returns
-  -------
-  nothing
-  """
-
-  try:
-    #
-    # call the web service:
-    #
-    api = '/users'
-    url = baseurl + api
-
-    res = requests.get(url)
-
-    #
-    # let's look at what we got back:
-    #
-    if res.status_code != 200:
-      # failed:
-      print("Failed with status code:", res.status_code)
-      print("url: " + url)
-      if res.status_code == 400:  # we'll have an error message
-        body = res.json()
-        print("Error message:", body["message"])
-      #
-      return
-
-    #
-    # deserialize and extract users:
-    #
-    body = res.json()
-    #
-    # let's map each dictionary into a User object:
-    #
-    users = []
-    for row in body["data"]:
-      user = jsons.load(row, User)
-      users.append(user)
-    #
-    # Now we can think OOP:
-    #
-    for user in users:
-      print(user.userid)
-      print(" ", user.email)
-      print(" ", user.lastname, ",", user.firstname)
-      print(" ", user.bucketfolder)
-
-  except Exception as e:
-    logging.error("users() failed:")
     logging.error("url: " + url)
     logging.error(e)
     return
@@ -422,9 +358,8 @@ def display(baseurl, assetid):
     asset.userid = body['user_id']
     asset.assetname = body['asset_name']
     asset.bucketkey = body['bucket_key']
-    print("userid:", asset.userid)
-    print("asset name:", asset.assetname)
-    print("bucket key:", asset.bucketkey)
+    print("==== Current Pic ====")
+    print("Asset Name:", asset.assetname)
 
     binary = base64.b64decode(body['data'])
     fp = io.BytesIO(binary)
@@ -534,69 +469,70 @@ def upload_handle(baseurl):
   res = requests.post(url, json=body)
   print(res.text)
 
-##########################################################################
-##picfusion()
-def picfusion(baseurl):
-  """
-  Browse through the assets in the database
-  
-  Parameters
-  ----------
-  baseurl: baseurl for web service
-  
-  Returns
-  -------
-  nothing
-  """
-
+def get_location(location):
   try:
+    #
+    # call the web service:
+    #
+    api = '/location'
+    url = baseurl + api
+    params = {'location':location}
 
-    asset_lst = assets(baseurl)
-
-    for asset in asset_lst:
-      print(asset.assetid)
-      print(" ", asset.assetname)
+    res = requests.get(url, params=params)
 
     #
-    # Prompt the user to enter the assetid to display the picture
+    # let's look at what we got back:
     #
-    print(">> Enter asset id to display the picture:")
-    assetid = int(input())
-    current_index = next((index for (index, d) in enumerate(asset_lst) if d.assetid == assetid), None)
-    
-    # download(baseurl, assetid, True)
-    display(baseurl, assetid)
-    
-    # After displaying the picture, 
-    # prompt the user to either display the next picture, or the previous picture, or exit
-    #
-    while True:
-      print(">> Enter 'n' to display the next picture, 'p' to display the previous picture, or 'e' to exit:")
-      action = input().strip().lower()
-      if action == 'n':
-        if current_index < len(asset_lst) - 1:
-          current_index += 1
-        else:
-          print("This is the last picture. Selecting 'n' will take you to the first picture.")
-          current_index = 0
-      elif action == 'p':
-        if current_index > 0:
-          current_index -= 1
-        else:
-          print("This is the first picture. Selecting 'p' will take you to the last picture.")
-          current_index = len(asset_lst) - 1
-      elif action == 'e':
-        break
-      else:
-        print("Invalid input. Please enter 'n', 'p', or 'e'.")
-        continue
-      # download(baseurl, assets[current_index].assetid, True)
-      display(baseurl, asset_lst[current_index].assetid)
+    if res.status_code != 200:
+      # failed:
+      print("Failed with status code:", res.status_code)
+      print("url: " + url)
+      if res.status_code == 400:  # we'll have an error message
+        body = res.json()
+        print("Error message:", body["message"])
+      #
+      return
+
+    body = res.json()
+    return body['latitude'], body['longitude']
 
   except Exception as e:
-    logging.error("picfusion() failed:")
+    logging.error("get_location() failed:")
+    logging.error("url: " + url)
     logging.error(e)
     return
+
+def sort_handle(asset_lst):
+    while True:
+      print(">>> Sort By?")
+      print(">>> [l]ikes  [d]istance")
+      sort_type = input().strip().lower()
+      if sort_type == 'l':
+        print(">>> [a]scend  [d]escend")
+        order = input().strip().lower() == 'd'
+        return sorted(asset_lst, key=lambda x: x.like_count, reverse=order)
+      elif sort_type == 'd':
+        print(">>> Please provide a location (e.g near Chicago):")
+        location = input()
+        print(">>> [a]scend  [d]escend")
+        order = input().strip().lower() == 'a'
+        target_latitude, target_longitude = get_location(location)
+        return utils.sort_by_geo(asset_lst, target_latitude, target_longitude, order)
+      else:
+        print("Invalid Sort Type.")
+        continue
+
+def display_lst(asset_lst, current_index):
+  left = max(0, current_index - 2)
+  right = min(len(asset_lst) - 1, max(current_index + 2, 5))
+  print("==== Photos ====")
+  print ("{:<15} {:<8} {:<15}".format('Name', 'Likes', 'Location'))
+  for i in range(left, right+1):
+    asset = asset_lst[i]
+    output = "{:<15} {:<8} {:<15}".format(asset.assetname, asset.like_count, asset.formatted_addr)
+    if i == current_index:
+      output += "  <=="
+    print(output)
 
 ##########################################################################
 ##
@@ -616,31 +552,16 @@ def picfusion_interact(baseurl):
 
   try:
     asset_lst = assets(baseurl)
+    current_index = 0
 
-    for asset in asset_lst:
-      print(asset.assetid)
-      print(" ", asset.assetname)
-      print("  Likes:", asset.like_count)
-      # print("Likes:", asset.like_count)
-    #
-    # Prompt the user to enter the assetid to display the picture
-    #
-    print(">> Enter asset id to display the picture:")
-    assetid = int(input())
-    current_index = next((index for (index, d) in enumerate(asset_lst) if d.assetid == assetid), None)
-    
-    # download(baseurl, assetid, True)
-    display(baseurl, assetid)
-    
-    # After displaying the picture, 
-    #prompt the user to either display the next picture, or the previous picture, or exit
-    #
+    # Main Loop
     while True:
-      # print("Enter 'n' to display the next picture, 'p' to display the previous picture, or 'e' to exit>")
-      print(">>> Enter 'n' to display the next picture, 'p' to display the previous picture, '1' to like, '2' to dislike, or 'e' to exit:")
-      print(">>> '1' to like, '2' to dislike,")
-      print(">>> 'ASC' to ascending order display, 'DESC' to descending order display, ")
-      print(">>> 'e' to exit:")
+      display_lst(asset_lst, current_index)
+      display(baseurl, asset_lst[current_index].assetid)
+      print("==== Operations ====")
+      print(">>> [n]ext  [p]rev")
+      print(">>> [l]ike  [d]islike")
+      print(">>> [s]ort  [e]xit")
       action = input().strip().lower()
       if action == 'n':
         if current_index < len(asset_lst) - 1:
@@ -654,21 +575,19 @@ def picfusion_interact(baseurl):
         else:
           print("[This is the first picture. Selecting 'p' to the last picture.]")
           current_index = len(asset_lst) - 1
-      elif action == '1':
-            send_interaction(baseurl, asset_lst[current_index].assetid, 1)
-      elif action == '2':
-            send_interaction(baseurl, asset_lst[current_index].assetid, -1)   
-      elif action == 'asc':
-            display_assets_by_likes(baseurl, 'ASC')
-      elif action == 'desc':
-            display_assets_by_likes(baseurl, 'DESC')
+      elif action == 'l':
+        send_interaction(baseurl, asset_lst[current_index].assetid, 1)
+      elif action == 'd':
+        send_interaction(baseurl, asset_lst[current_index].assetid, -1)   
+      elif action == 's':
+        asset_lst = sort_handle(asset_lst)
+        current_index = 0
       elif action == 'e':
         break
       else:
-        print("Invalid input. Please enter 'n', 'p', '1', '2', or 'e'.")
+        print("Invalid input")
         continue
       # download(baseurl, assets[current_index].assetid, True)
-      display(baseurl, asset_lst[current_index].assetid)
 
   except Exception as e:
     logging.error("picfusion() failed:")
@@ -733,6 +652,7 @@ def customed_display(baseurl):
             break
         else:
             print("Invalid input. Please enter 'ASC', 'DESC', or 'e'.")
+
 ##########################################################################
 # 
 #
@@ -766,10 +686,11 @@ def display_assets_by_likes(baseurl, order):
         logging.error("display_assets_by_likes() failed:")
         logging.error(e)
         return
+    
 #########################################################################
 # sign in
 def signin(baseurl, email, encrypted_password) -> bool:
-  api = 'signin'
+  api = '/signin'
   url = baseurl + api
 
   data = {
@@ -782,6 +703,8 @@ def signin(baseurl, email, encrypted_password) -> bool:
   
     if res.status_code == 201:
       print("Successfully Log in!")
+      global USER_ID
+      USER_ID = res.json()['userid']
       return True
     else:
       print("Log in failed, status code:", res.status_code)
@@ -792,11 +715,12 @@ def signin(baseurl, email, encrypted_password) -> bool:
     logging.error("signin() failed:")
     logging.error("url: " + url)
     logging.error(e)
-    return
+    return False
+  
   #########################################################################
 # register
 def register(baseurl, email, username, encrypted_user_password):
-  api = 'register'
+  api = '/register'
   url = baseurl + api
 
   data = {
@@ -819,10 +743,10 @@ def register(baseurl, email, username, encrypted_user_password):
     logging.error("url: " + url)
     logging.error(e)
     return
+  
   #########################################################################
 # login prompt
 def login_prompt(baseurl):
-  import hashlib
   logged_in = False
   
   print()
@@ -844,6 +768,7 @@ def login_prompt(baseurl):
         result = signin(baseurl, email, encrypted_password)
         if result:
           logged_in = True
+
         
       elif signinOption == 2:
         email = input("Please Enter your email: ")
@@ -858,7 +783,9 @@ def login_prompt(baseurl):
     logging.error("register() failed:")
     logging.error(e)
     return
-        
+
+
+
 #########################################################################
 # main
 #
@@ -897,14 +824,14 @@ configur = ConfigParser()
 configur.read(config_file)
 baseurl = configur.get('client', 'webservice')
 
-# print(baseurl)
 
 ###############################
 #
 # Login process
 #
 
-login_prompt(baseurl)
+while USER_ID is None:
+  login_prompt(baseurl)
 ###############################
 
 #
@@ -912,7 +839,7 @@ login_prompt(baseurl)
 #
 cmd = prompt()
 
-while cmd != 0:
+while USER_ID is not None and cmd != 0:
   #
   if cmd == 1:
     stats(baseurl)
@@ -939,8 +866,6 @@ while cmd != 0:
         break
   elif cmd == 7:
     upload_handle(baseurl)
-  elif cmd == 8:
-    picfusion(baseurl)
   elif cmd == 9:
     picfusion_interact(baseurl)
   elif cmd == 10:
