@@ -17,7 +17,7 @@ Users will need to register and log in to access our platform’s key features. 
 
 ##### **Project Architecture Diagram:**
 
-![Imgur](https://i.imgur.com/4oPdbVN.jpg)
+![Imgur](Data_Architecture_Chart.png)
 
 
 
