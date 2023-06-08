@@ -50,7 +50,6 @@ app.get('/assets', assets.get_assets);  //app.get('/assets', (req, res) => {...}
 app.get('/download/:assetid', download.get_download); //app.get('/download/:assetid', (req, res) => {...});
 app.post('/upload/:userid', upload.post_image);
 app.post('/interactions', interactions.post_interaction);
-app.get('/interactions/:assetid', interactions.get_interaction);
 app.post('/signin', signInAndRegister.post_signin); // app.post('/image/:userid', (req, res) => {...});
 app.post('/register', signInAndRegister.post_register); // app.post('/image/:userid', (req, res) => {...});
 app.get('/location', location.location);
