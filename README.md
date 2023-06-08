@@ -17,13 +17,12 @@ Users will need to register and log in to access our platform’s key features. 
 
 ##### **Project Architecture Diagram:**
 
-![Imgur](Data_Architecture_Chart.png)
+![Imgur](Software_Architecture_Chart.png)
 
 
 
 ##### **Dataset ER Diagram:**
 
-![Imgur](Software_Architecture_Chart.png)
-
+![Imgur](Data_Architecture_Chart.png)
 
 
