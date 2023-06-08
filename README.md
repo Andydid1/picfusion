@@ -23,7 +23,7 @@ Users will need to register and log in to access our platform’s key features. 
 
 ##### **Dataset ER Diagram:**
 
-![Imgur](https://i.imgur.com/mfYrT9k.jpg)
+![Imgur](Software_Architecture_Chart.png)
 
 
 
