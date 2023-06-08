@@ -409,6 +409,7 @@ def send_interaction(baseurl, assetid, interaction_type):
     -------
     nothing
     """
+    print("Processing...")
     try:
         api = '/interactions'
         url = baseurl + api
