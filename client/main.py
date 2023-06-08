@@ -232,8 +232,8 @@ def display(baseurl, assetid):
       plt.title(asset.assetname)
       # plt.show()
       plt.show(block=False)  # make plt.show() non-blocking
-      plt.pause(3)  # pause for a while for the user to see the image
-      plt.close()  # close the figure window
+      # plt.pause(3)  # pause for a while for the user to see the image
+      # plt.close()  # close the figure window
 
   except Exception as e:
     logging.error("download() failed:")
@@ -320,13 +320,20 @@ def sort_handle(asset_lst):
         continue
 
 def display_lst(asset_lst, current_index):
-  left = max(0, current_index - 2)
-  right = min(len(asset_lst) - 1, max(current_index + 2, 4))
+
+  left = current_index - 2
+  right = current_index + 2
+  if current_index - 2 < 0:
+    left = 0
+    right = min(4, len(asset_lst) - 1)
+  elif current_index + 2 >= len(asset_lst):
+    left = len(asset_lst) - 5
+    right = len(asset_lst) - 1
   print("==== Pics ====")
-  print ("{:<25} {:<8} {:<25}".format('Name', 'Likes', 'Location'))
+  print ("{:6} {:<25} {:<8} {:<25}".format('Index', 'Name', 'Likes', 'Location'))
   for i in range(left, right+1):
     asset = asset_lst[i]
-    output = "{:<25} {:<8} {:<25}".format(asset.assetname, asset.like_count, asset.formatted_addr)
+    output = "{:6} {:<25} {:<8} {:<25}".format(i+1, asset.assetname, asset.like_count, asset.formatted_addr)
     if i == current_index:
       output += "  <=="
     print(output)
@@ -373,11 +380,13 @@ def picfusion(baseurl):
           print("[This is the first picture. Selecting 'p' to the last picture.]")
           current_index = len(asset_lst) - 1
       elif action == 'l':
-        send_interaction(baseurl, asset_lst[current_index].assetid, 1)
-        asset_lst = assets(baseurl)
+        new_like_count = send_interaction(baseurl, asset_lst[current_index].assetid, 1)
+        if new_like_count is not None:
+          asset_lst[current_index].like_count = new_like_count
       elif action == 'd':
-        send_interaction(baseurl, asset_lst[current_index].assetid, -1)   
-        asset_lst = assets(baseurl)
+        new_like_count = send_interaction(baseurl, asset_lst[current_index].assetid, -1)   
+        if new_like_count is not None:
+          asset_lst[current_index].like_count = new_like_count
       elif action == 's':
         asset_lst = sort_handle(asset_lst)
         current_index = 0
@@ -425,10 +434,13 @@ def send_interaction(baseurl, assetid, interaction_type):
             if res.status_code == 400:  # we'll have an error message
                 body = res.json()
                 print("Error message:", body["message"])
+            return None
+        return res.json()['like_count']
     except Exception as e:
         logging.error("send_interaction() failed:")
         logging.error("url: " + url)
         logging.error(e)
+        return None
     
 #########################################################################
 # sign in
