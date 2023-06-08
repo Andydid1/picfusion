@@ -766,7 +766,99 @@ def display_assets_by_likes(baseurl, order):
         logging.error("display_assets_by_likes() failed:")
         logging.error(e)
         return
+#########################################################################
+# sign in
+def signin(baseurl, email, encrypted_password) -> bool:
+  api = 'signin'
+  url = baseurl + api
 
+  data = {
+    "email": email,
+    "password": encrypted_password
+    }
+
+  try:
+    res = requests.post(url, json=data)
+  
+    if res.status_code == 201:
+      print("Successfully Log in!")
+      return True
+    else:
+      print("Log in failed, status code:", res.status_code)
+      print("Error message:", res.json())
+      return False
+      
+  except Exception as e:
+    logging.error("signin() failed:")
+    logging.error("url: " + url)
+    logging.error(e)
+    return
+  #########################################################################
+# register
+def register(baseurl, email, username, encrypted_user_password):
+  api = 'register'
+  url = baseurl + api
+
+  data = {
+    "email": email,
+    "username": username,
+    "password": encrypted_user_password
+    }
+
+  try:
+    res = requests.post(url, json=data)
+  
+    if res.status_code == 200:
+      print("Successfully Register!")
+    else:
+      print("Register failed, status code:", res.status_code)
+      print("Error message:", res.json())
+
+  except Exception as e:
+    logging.error("register() failed:")
+    logging.error("url: " + url)
+    logging.error(e)
+    return
+  #########################################################################
+# login prompt
+def login_prompt(baseurl):
+  import hashlib
+  logged_in = False
+  
+  print()
+  print("Hello! Welcome to your PicFusion!")
+  try:
+    while not logged_in:
+      print()
+      print("   1 => Sign In")
+      print("   2 => Rigister as a new user")
+      print()
+      signinOption = int(input("SignIn or Register: "))
+      
+      if signinOption == 1:
+        email = input("Please Enter your Email: ")
+        password = input("Please Enter your Password: ")
+        
+        encrypted_password = hashlib.md5(password.encode()).hexdigest()
+        
+        result = signin(baseurl, email, encrypted_password)
+        if result:
+          logged_in = True
+        
+      elif signinOption == 2:
+        email = input("Please Enter your email: ")
+        username = input("Please Enter a User Name: ")
+        user_password = input("Please Enter your Password: ")
+    
+        encrypted_user_password = hashlib.md5(user_password.encode()).hexdigest()
+    
+        register(baseurl, email, username, encrypted_user_password)
+        
+  except Exception as e:
+    logging.error("register() failed:")
+    logging.error(e)
+    return
+        
 #########################################################################
 # main
 #
@@ -806,6 +898,14 @@ configur.read(config_file)
 baseurl = configur.get('client', 'webservice')
 
 # print(baseurl)
+
+###############################
+#
+# Login process
+#
+
+login_prompt(baseurl)
+###############################
 
 #
 # main processing loop:
